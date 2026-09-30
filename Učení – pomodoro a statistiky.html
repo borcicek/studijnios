@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Učení</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #ffffff; --text: #37352f; --muted: #787774; --line: rgba(55,53,47,.12);
+    --track: rgba(55,53,47,.08); --field: rgba(55,53,47,.05);
+    --accent: #9f6b53; --accent-soft: rgba(159,107,83,.14); --on-accent: #fff; --danger: #d44c47;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #191919; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.46); --line: rgba(255,255,255,.1);
+      --track: rgba(255,255,255,.07); --field: rgba(255,255,255,.055);
+      --accent: #ba856f; --accent-soft: rgba(186,133,111,.16); --on-accent: #191919; --danger: #e06b66;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #191919; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.46); --line: rgba(255,255,255,.1);
+    --track: rgba(255,255,255,.07); --field: rgba(255,255,255,.055);
+    --accent: #ba856f; --accent-soft: rgba(186,133,111,.16); --on-accent: #191919; --danger: #e06b66;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 14px; -webkit-font-smoothing: antialiased;
+  }
+  .w { padding: 14px 16px 18px; max-width: 560px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
+
+  /* ---------- timer ---------- */
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .top h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .streak { font-size: 13px; color: var(--muted); }
+  .streak b { color: var(--accent); font-size: 15px; }
+
+  .field { display: block; margin-bottom: 10px; }
+  .field span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .field input {
+    width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--field); color: var(--text); font: inherit;
+  }
+  .mins { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .chip {
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .mins input {
+    width: 70px; padding: 6px 8px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--field); color: var(--text); font: inherit; text-align: center;
+  }
+  .btn {
+    padding: 9px 16px; border-radius: 6px; border: 1px solid var(--line); background: transparent; font-weight: 500;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .btn.wide { width: 100%; }
+  .btns { display: flex; gap: 8px; }
+  .btns .btn { flex: 1; }
+
+  .run { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 4px 0 6px; }
+  .ring { position: relative; width: 200px; height: 200px; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 8; }
+  .ring .bgc { stroke: var(--track); }
+  .ring .fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .3s linear; }
+  .ring.brk .fg { stroke: var(--muted); }
+  .ring .in { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 28px; }
+  .time { font-size: 44px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .what { margin-top: 8px; font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .what2 { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .run .btns { width: 100%; max-width: 320px; }
+  .done-msg { text-align: center; font-size: 15px; margin: 4px 0 2px; }
+  .done-msg b { color: var(--accent); }
+
+  /* ---------- stats ---------- */
+  hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0 14px; }
+  .tabs { display: flex; gap: 2px; background: var(--field); border-radius: 7px; padding: 2px; margin-bottom: 12px; }
+  .tabs button { flex: 1; border: 0; background: transparent; padding: 6px 4px; border-radius: 5px; color: var(--muted); }
+  .tabs button[aria-selected="true"] { background: var(--bg); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .nav button { border: 0; background: transparent; padding: 2px 10px; font-size: 18px; color: var(--muted); border-radius: 5px; }
+  .nav button:disabled { opacity: .25; cursor: default; }
+  .nav .lbl { font-weight: 600; }
+  .total { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .total .big { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+  .chart { display: flex; align-items: flex-end; gap: 3px; height: 90px; margin-bottom: 4px; }
+  .chart .col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+  .chart .col i { display: block; width: 100%; background: var(--accent); border-radius: 3px 3px 1px 1px; min-height: 2px; opacity: .85; }
+  .chart .col.zero i { background: var(--track); opacity: 1; }
+  .chart .col.today i { opacity: 1; box-shadow: 0 0 0 1.5px var(--text) inset; }
+  .axis { display: flex; gap: 3px; font-size: 10px; color: var(--muted); margin-bottom: 14px; }
+  .axis span { flex: 1; text-align: center; overflow: hidden; white-space: nowrap; }
+
+  .subj { margin-bottom: 8px; }
+  .subj .r { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .subj .b { height: 5px; background: var(--track); border-radius: 3px; overflow: hidden; }
+  .subj .b i { display: block; height: 100%; border-radius: 3px; }
+
+  .list { margin-top: 12px; }
+  .item { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); }
+  .item .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .item .t { flex: 1; min-width: 0; }
+  .item .t div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .x { border: 0; background: transparent; color: var(--muted); padding: 2px 6px; border-radius: 4px; font-size: 16px; line-height: 1; }
+  .item .x:hover { color: var(--danger); }
+  .empty { color: var(--muted); padding: 10px 0 4px; }
+  .sync { font-size: 11px; color: var(--muted); margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="top">
+    <h1>Učení</h1>
+    <div class="streak" id="streak"></div>
+  </div>
+
+  <!-- nastavení bloku -->
+  <section id="setup">
+    <label class="field"><span>Předmět</span>
+      <input id="subject" list="subjects" placeholder="např. Organic Chemistry" autocomplete="off"></label>
+    <datalist id="subjects"></datalist>
+    <label class="field"><span>Co přesně</span>
+      <input id="topic" placeholder="např. kapitola 3, alkeny" autocomplete="off"></label>
+    <div class="field" style="margin-bottom:6px"><span>Délka bloku</span></div>
+    <div class="mins" id="mins">
+      <button class="chip" data-m="15">15</button>
+      <button class="chip" data-m="25">25</button>
+      <button class="chip" data-m="45">45</button>
+      <button class="chip" data-m="60">60</button>
+      <input id="customMin" type="number" min="1" max="240" inputmode="numeric" aria-label="Vlastní počet minut" placeholder="min">
+    </div>
+    <button class="btn primary wide" id="startBtn">Začít učení</button>
+  </section>
+
+  <!-- běžící blok -->
+  <section id="running" hidden>
+    <div class="run">
+      <div class="ring" id="ring">
+        <svg viewBox="0 0 200 200"><circle class="bgc" cx="100" cy="100" r="92"/><circle class="fg" id="arc" cx="100" cy="100" r="92"/></svg>
+        <div class="in">
+          <div class="time" id="time">25:00</div>
+          <div class="what" id="what"></div>
+          <div class="what2" id="what2"></div>
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn" id="pauseBtn">Pozastavit</button>
+        <button class="btn" id="stopBtn">Ukončit a uložit</button>
+      </div>
+      <button class="btn" id="cancelBtn" style="border:0;color:var(--muted);padding:2px 8px">Zrušit bez uložení</button>
+    </div>
+  </section>
+
+  <!-- po dokončení -->
+  <section id="finished" hidden>
+    <p class="done-msg" id="doneMsg"></p>
+    <div class="btns" style="margin-top:12px">
+      <button class="btn" id="breakBtn">Pauza 5 min</button>
+      <button class="btn primary" id="againBtn">Další blok</button>
+    </div>
+    <button class="btn wide" id="newBtn" style="border:0;color:var(--muted);margin-top:6px">Změnit předmět</button>
+  </section>
+
+  <hr>
+
+  <!-- statistiky -->
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-p="day" aria-selected="true">Den</button>
+    <button role="tab" data-p="week" aria-selected="false">Týden</button>
+    <button role="tab" data-p="month" aria-selected="false">Měsíc</button>
+    <button role="tab" data-p="sem" aria-selected="false">Semestr</button>
+  </div>
+  <div class="nav">
+    <button id="prev" aria-label="Předchozí">‹</button>
+    <span class="lbl" id="plabel"></span>
+    <button id="next" aria-label="Další">›</button>
+  </div>
+  <div class="total"><span class="big" id="tot"></span><span class="muted" id="cnt"></span></div>
+  <div id="chartWrap"><div class="chart" id="chart"></div><div class="axis" id="axis"></div></div>
+  <div id="bySubj"></div>
+  <div class="list" id="list"></div>
+  <div class="sync" id="sync"></div>
+</div>
+
+<script>
+/* ===== NASTAVENÍ ===== */
+const SEM_START = new Date(2026, 8, 29);   // začátek semestru
+const SEM_WEEKS = 11;                      // týdnů výuky (graf semestru ukáže aspoň tolik)
+const BREAK_MIN = 5;
+
+/* ===== pomocné ===== */
+const $ = id => document.getElementById(id);
+const DNY = ["Ne","Po","Út","St","Čt","Pá","So"];
+const MES = ["leden","únor","březen","duben","květen","červen","červenec","srpen","září","říjen","listopad","prosinec"];
+const MES2 = ["ledna","února","března","dubna","května","června","července","srpna","září","října","listopadu","prosince"];
+const COLORS = ["#ba856f","#529cca","#4dab9a","#9a6dd7","#e2b53e","#e255a1","#d9730d","#8d8d8a"];
+const day0 = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addD = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const monday = d => addD(day0(d), -((d.getDay() + 6) % 7));
+const key = d => d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate();
+function fm(m) {
+  m = Math.round(m);
+  if (m < 60) return m + " min";
+  const h = Math.floor(m / 60), r = m % 60;
+  return h + " h" + (r ? " " + r + " min" : "");
+}
+function pl(n, a, b, c) { return n === 1 ? a : (n >= 2 && n <= 4 ? b : c); }
+function colorOf(s) { let h = 0; for (const ch of s.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; }
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+const LS_S = "studyos.sessions.v1", LS_R = "studyos.running.v1", LS_SET = "studyos.setup.v1";
+function lsGet(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } }
+function lsSet(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+/* ===== stav ===== */
+let sessions = lsGet(LS_S, []);
+let run = lsGet(LS_R, null);     // {kind:'study'|'break', subject, topic, min, start, acc, resumedAt}
+let setup = lsGet(LS_SET, { subject: "", topic: "", min: 25 });
+let period = "day", offset = 0;
+let remote = null;                // db kolekce, pokud je k dispozici
+
+function saveLocal() { lsSet(LS_S, sessions); }
+
+/* ===== zvuk ===== */
+let actx = null;
+function unlockAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch {} }
+function chime() {
+  if (!actx) return;
+  const t = actx.currentTime;
+  [0, .25, .5].forEach((dt, i) => {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sine"; o.frequency.value = [660, 880, 990][i];
+    g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(.25, t + dt + .02);
+    g.gain.exponentialRampToValueAtTime(.001, t + dt + .6);
+    o.connect(g).connect(actx.destination); o.start(t + dt); o.stop(t + dt + .65);
+  });
+}
+
+/* ===== timer ===== */
+const CIRC = 2 * Math.PI * 92;
+$("arc").style.strokeDasharray = CIRC;
+
+function elapsed() { return run ? run.acc + (run.resumedAt ? Date.now() - run.resumedAt : 0) : 0; }
+
+function show(which) {
+  $("setup").hidden = which !== "setup";
+  $("running").hidden = which !== "running";
+  $("finished").hidden = which !== "finished";
+}
+
+function startBlock(kind) {
+  unlockAudio();
+  if (kind === "study") {
+    const subject = $("subject").value.trim() || "Bez předmětu";
+    const topic = $("topic").value.trim();
+    setup = { subject, topic, min: setup.min };
+    lsSet(LS_SET, setup);
+    run = { kind, subject, topic, min: setup.min, start: Date.now(), acc: 0, resumedAt: Date.now() };
+  } else {
+    run = { kind, subject: "Pauza", topic: "", min: BREAK_MIN, start: Date.now(), acc: 0, resumedAt: Date.now() };
+  }
+  lsSet(LS_R, run);
+  show("running");
+  tick();
+}
+
+function finishBlock(save, natural) {
+  if (!run) return;
+  const r = run, ms = Math.min(elapsed(), r.min * 60000);
+  run = null; lsSet(LS_R, null);
+  document.title = "Učení";
+  if (r.kind === "study" && save && ms >= 60000) {
+    const s = { id: uid(), subject: r.subject, topic: r.topic, min: Math.round(ms / 60000), start: r.start, end: Date.now() };
+    sessions.push(s); saveLocal();
+    if (remote) remote.doc(s.id).set(s).catch(() => {});
+    $("doneMsg").innerHTML = (natural ? "Hotovo! " : "Uloženo. ") + "<b>+" + fm(s.min) + "</b> " + escapeHtml(r.subject);
+    show("finished");
+  } else if (r.kind === "break" && natural) {
+    $("doneMsg").textContent = "Pauza skončila. Jdeme na to?";
+    show("finished");
+  } else if (r.kind === "study" && save) {
+    $("doneMsg").textContent = "Blok kratší než minuta se neukládá.";
+    show("finished");
+  } else {
+    show("setup");
+  }
+  if (natural) chime();
+  renderStats();
+}
+
+function tick() {
+  if (!run) return;
+  const total = run.min * 60000, el = elapsed(), left = Math.max(0, total - el);
+  const s = Math.ceil(left / 1000), mm = Math.floor(s / 60), ss = s % 60;
+  const txt = String(mm).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+  $("time").textContent = txt;
+  $("arc").style.strokeDashoffset = CIRC * (el / total);
+  $("ring").classList.toggle("brk", run.kind === "break");
+  $("what").textContent = run.subject;
+  $("what2").textContent = run.kind === "break" ? "odpočívej" : (run.topic || "");
+  $("pauseBtn").textContent = run.resumedAt ? "Pozastavit" : "Pokračovat";
+  $("stopBtn").textContent = run.kind === "break" ? "Ukončit pauzu" : "Ukončit a uložit";
+  $("cancelBtn").hidden = run.kind === "break";
+  document.title = txt + " · " + run.subject;
+  if (left <= 0) finishBlock(true, true);
+}
+setInterval(tick, 250);
+
+/* ===== ovládání ===== */
+function paintMins() {
+  let matched = false;
+  document.querySelectorAll(".chip").forEach(c => {
+    const on = +c.dataset.m === setup.min; if (on) matched = true;
+    c.setAttribute("aria-pressed", on);
+  });
+  $("customMin").value = matched ? "" : setup.min;
+}
+$("mins").addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  setup.min = +c.dataset.m; lsSet(LS_SET, setup); paintMins();
+});
+$("customMin").addEventListener("input", e => {
+  const v = Math.round(+e.target.value);
+  if (v >= 1 && v <= 240) {
+    setup.min = v; lsSet(LS_SET, setup);
+    document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", +c.dataset.m === v));
+  }
+});
+$("startBtn").onclick = () => startBlock("study");
+$("againBtn").onclick = () => startBlock("study");
+$("breakBtn").onclick = () => startBlock("break");
+$("newBtn").onclick = () => show("setup");
+$("stopBtn").onclick = () => finishBlock(true, false);
+$("cancelBtn").onclick = () => { if (confirm("Zrušit blok bez uložení?")) finishBlock(false, false); };
+$("pauseBtn").onclick = () => {
+  if (!run) return;
+  if (run.resumedAt) { run.acc += Date.now() - run.resumedAt; run.resumedAt = null; }
+  else run.resumedAt = Date.now();
+  lsSet(LS_R, run); tick();
+};
+[["subject","subject"],["topic","topic"]].forEach(([id]) =>
+  $(id).addEventListener("keydown", e => { if (e.key === "Enter") startBlock("study"); }));
+
+/* ===== statistiky ===== */
+function streak() {
+  const days = new Set(sessions.map(s => key(new Date(s.start))));
+  let d = day0(new Date()), n = 0;
+  if (!days.has(key(d))) d = addD(d, -1);
+  while (days.has(key(d))) { n++; d = addD(d, -1); }
+  return { n, today: days.has(key(day0(new Date()))) };
+}
+
+function range() {
+  const t = day0(new Date());
+  if (period === "day") { const a = addD(t, offset); return { a, b: addD(a, 1) }; }
+  if (period === "week") { const a = addD(monday(t), offset * 7); return { a, b: addD(a, 7) }; }
+  if (period === "month") { const a = new Date(t.getFullYear(), t.getMonth() + offset, 1); return { a, b: new Date(a.getFullYear(), a.getMonth() + 1, 1) }; }
+  const a = monday(SEM_START);
+  const wk = Math.max(SEM_WEEKS, Math.floor((monday(t) - a) / 6048e5) + 1);
+  return { a, b: addD(a, wk * 7) };
+}
+
+function label(a, b) {
+  const t = day0(new Date());
+  if (period === "day") {
+    if (offset === 0) return "Dnes";
+    if (offset === -1) return "Včera";
+    return DNY[a.getDay()] + " " + a.getDate() + ". " + MES2[a.getMonth()];
+  }
+  if (period === "week") {
+    const e = addD(b, -1);
+    const base = a.getDate() + ". " + (a.getMonth() !== e.getMonth() ? (a.getMonth()+1) + ". " : "") + "– " + e.getDate() + ". " + (e.getMonth()+1) + ".";
+    return offset === 0 ? "Tento týden (" + base + ")" : base;
+  }
+  if (period === "month") return MES[a.getMonth()].replace(/^./, c => c.toUpperCase()) + " " + a.getFullYear();
+  return "Semestr od " + SEM_START.getDate() + ". " + (SEM_START.getMonth()+1) + ".";
+}
+
+function buckets(a, b) {
+  const out = [], t = day0(new Date());
+  if (period === "week" || period === "month") {
+    for (let d = new Date(a); d < b; d = addD(d, 1))
+      out.push({ a: d, b: addD(d, 1), lab: period === "week" ? DNY[d.getDay()] : (d.getDate() === 1 || d.getDate() % 5 === 0 ? d.getDate() : ""), now: +d === +t });
+  } else if (period === "sem") {
+    let i = 1;
+    for (let d = new Date(a); d < b; d = addD(d, 7), i++)
+      out.push({ a: d, b: addD(d, 7), lab: i, now: t >= d && t < addD(d, 7) });
+  }
+  return out;
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+function renderStats() {
+  const st = streak();
+  $("streak").innerHTML = st.n
+    ? "🔥 <b class='num'>" + st.n + "</b> " + pl(st.n, "den", "dny", "dní") + " v řadě" + (st.today ? "" : " · dnes ještě ne")
+    : "Začni svůj streak";
+
+  const subs = [...new Set(sessions.map(s => s.subject))];
+  ["Organic Chemistry","Environmental Science","Data Structures"].forEach(s => { if (!subs.includes(s)) subs.push(s); });
+  $("subjects").innerHTML = subs.map(s => "<option value='" + escapeHtml(s) + "'>").join("");
+
+  const { a, b } = range();
+  $("plabel").textContent = label(a, b);
+  $("prev").hidden = $("next").hidden = period === "sem";
+  $("next").disabled = offset >= 0;
+
+  const inR = sessions.filter(s => s.start >= +a && s.start < +b).sort((x, y) => y.start - x.start);
+  const total = inR.reduce((n, s) => n + s.min, 0);
+  $("tot").textContent = total ? fm(total) : "0 min";
+  $("cnt").textContent = inR.length + " " + pl(inR.length, "blok", "bloky", "bloků");
+
+  // graf
+  const bk = buckets(a, b);
+  $("chartWrap").hidden = !bk.length;
+  if (bk.length) {
+    const vals = bk.map(x => sessions.filter(s => s.start >= +x.a && s.start < +x.b).reduce((n, s) => n + s.min, 0));
+    const max = Math.max(...vals, 1);
+    $("chart").innerHTML = bk.map((x, i) =>
+      "<div class='col" + (vals[i] ? "" : " zero") + (x.now ? " today" : "") + "' title='" + (vals[i] ? fm(vals[i]) : "nic") + "'><i style='height:" + (vals[i] ? Math.max(4, vals[i] / max * 100) : 3) + "%'></i></div>").join("");
+    $("axis").innerHTML = bk.map(x => "<span>" + x.lab + "</span>").join("");
+  }
+
+  // podle předmětu
+  const by = {};
+  inR.forEach(s => by[s.subject] = (by[s.subject] || 0) + s.min);
+  const arr = Object.entries(by).sort((x, y) => y[1] - x[1]);
+  $("bySubj").innerHTML = arr.map(([s, m]) =>
+    "<div class='subj'><div class='r'><span>" + escapeHtml(s) + "</span><span class='num muted'>" + fm(m) + " · " + Math.round(m / total * 100) + " %</span></div>" +
+    "<div class='b'><i style='width:" + (m / total * 100) + "%;background:" + colorOf(s) + "'></i></div></div>").join("");
+
+  // seznam bloků (den a týden)
+  if (!inR.length) {
+    $("list").innerHTML = "<div class='empty'>" + (period === "day" && offset === 0 ? "Dnes zatím nic. Nastav předmět a spusť první blok." : "V tomhle období nic.") + "</div>";
+  } else if (period === "day" || period === "week") {
+    $("list").innerHTML = inR.map(s => {
+      const d = new Date(s.start);
+      const when = (period === "week" ? DNY[d.getDay()] + " " : "") + d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0");
+      return "<div class='item'><span class='dot' style='background:" + colorOf(s.subject) + "'></span>" +
+        "<div class='t'><div>" + escapeHtml(s.subject) + (s.topic ? " <span class='muted'>· " + escapeHtml(s.topic) + "</span>" : "") + "</div>" +
+        "<div class='muted num' style='font-size:12px'>" + when + " · " + fm(s.min) + "</div></div>" +
+        "<button class='x' data-id='" + s.id + "' aria-label='Smazat blok'>×</button></div>";
+    }).join("");
+  } else {
+    $("list").innerHTML = "";
+  }
+}
+
+$("tabs").addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  period = t.dataset.p; offset = 0;
+  document.querySelectorAll("#tabs button").forEach(x => x.setAttribute("aria-selected", x === t));
+  renderStats();
+});
+$("prev").onclick = () => { offset--; renderStats(); };
+$("next").onclick = () => { if (offset < 0) { offset++; renderStats(); } };
+$("list").addEventListener("click", e => {
+  const x = e.target.closest(".x"); if (!x) return;
+  const s = sessions.find(s => s.id === x.dataset.id); if (!s) return;
+  if (!confirm("Smazat blok " + s.subject + " (" + fm(s.min) + ")?")) return;
+  sessions = sessions.filter(q => q.id !== s.id); saveLocal();
+  if (remote) remote.doc(s.id).delete().catch(() => {});
+  renderStats();
+});
+
+/* ===== start ===== */
+$("subject").value = setup.subject || "";
+$("topic").value = setup.topic || "";
+paintMins();
+if (run) { show("running"); tick(); } else show("setup");
+renderStats();
+setInterval(renderStats, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { tick(); renderStats(); } });
+
+/* ===== synchronizace mezi zařízeními (když je k dispozici) ===== */
+(async () => {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+    if (!db || !user) return;
+    const id = await user.id(); if (!id) return;
+    const col = db.collection("data/users/" + id);
+    const snap = await col.get();
+    const have = new Set(snap.docs.map(d => d.id));
+    for (const s of sessions) if (!have.has(s.id)) { try { await col.doc(s.id).set(s); } catch {} }
+    remote = col;
+    $("sync").textContent = "Synchronizováno s tvým účtem Claude.";
+    col.onSnapshot(qs => {
+      sessions = qs.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => s.start && s.min);
+      saveLocal(); renderStats();
+    }, () => {});
+  } catch {}
+})();
+</script>
+</body>
+</html>

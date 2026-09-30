@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Semestr</title>
+<style>
+  /* ===== NASTAVENÍ ===== */
+  /* (upravuje se v JS níže: START, ZKOUSKOVE, SVATKY) */
+
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #ffffff;
+    --text: #37352f;
+    --muted: #787774;
+    --track: rgba(55,53,47,.09);
+    --fill: #9f6b53;
+    --accent: #9f6b53;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #191919;
+      --text: rgba(255,255,255,.9);
+      --muted: rgba(255,255,255,.46);
+      --track: rgba(255,255,255,.08);
+      --fill: #ba856f;
+      --accent: #ba856f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #191919;
+    --text: rgba(255,255,255,.9);
+    --muted: rgba(255,255,255,.46);
+    --track: rgba(255,255,255,.08);
+    --fill: #ba856f;
+    --accent: #ba856f;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .w { padding: 14px 16px; max-width: 420px; }
+
+  .day { font-size: 14px; color: var(--muted); margin: 0; }
+  .date {
+    font-size: 30px; font-weight: 700; letter-spacing: -0.02em;
+    line-height: 1.1; margin: 2px 0 16px;
+  }
+
+  .row { display: flex; justify-content: space-between; align-items: baseline;
+         font-size: 14px; margin-bottom: 6px; }
+  .row .l { color: var(--muted); }
+  .row .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .bar { height: 6px; border-radius: 3px; background: var(--track);
+         overflow: hidden; margin-bottom: 14px; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--fill);
+             border-radius: 3px; transition: width .6s ease; }
+  @media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+
+  .weeks { display: flex; gap: 3px; margin-bottom: 16px; }
+  .weeks span { flex: 1; height: 6px; border-radius: 2px; background: var(--track); }
+  .weeks span.done { background: var(--fill); opacity: .55; }
+  .weeks span.now { background: var(--fill); }
+
+  .left { font-size: 15px; margin: 0; }
+  .left b { color: var(--accent); font-size: 18px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="w">
+  <p class="day" id="day"></p>
+  <div class="date" id="date"></div>
+
+  <div class="row"><span class="l">Uběhlé dny</span><span class="v" id="dv"></span></div>
+  <div class="bar"><i id="db"></i></div>
+
+  <div class="row"><span class="l">Týden semestru</span><span class="v" id="wv"></span></div>
+  <div class="weeks" id="wk"></div>
+
+  <p class="left" id="left"></p>
+</div>
+
+<script>
+  // ===== NASTAVENÍ =====
+  const START = new Date(2026, 8, 29);       // 29. 9. 2026 – začátek výuky
+  const ZKOUSKOVE = new Date(2026, 11, 14);  // 14. 12. 2026 – začátek zkouškového (zápočtový týden)
+
+  const DNY = ["neděle","pondělí","úterý","středa","čtvrtek","pátek","sobota"];
+  const MES = ["ledna","února","března","dubna","května","června",
+               "července","srpna","září","října","listopadu","prosince"];
+
+  const iso = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  const isTeaching = d => true; // počítají se všechny kalendářní dny
+  const midnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const mondayOf = d => { const m = midnight(d); m.setDate(m.getDate() - ((m.getDay()+6)%7)); return m; };
+
+  function countTeaching(from, toExcl) {
+    let n = 0;
+    for (let d = new Date(from); d < toExcl; d.setDate(d.getDate()+1)) if (isTeaching(d)) n++;
+    return n;
+  }
+  function plural(n) { return n === 1 ? "den" : (n >= 2 && n <= 4 ? "dny" : "dní"); }
+
+  function render() {
+    const today = midnight(new Date());
+
+    document.getElementById("day").textContent = DNY[today.getDay()];
+    document.getElementById("date").textContent =
+      today.getDate() + ". " + MES[today.getMonth()] + " " + today.getFullYear();
+
+    // Uběhlé dny (včetně dneška)
+    const total = countTeaching(START, ZKOUSKOVE);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+    const endCount = tomorrow < ZKOUSKOVE ? tomorrow : ZKOUSKOVE;
+    const done = today < START ? 0 : countTeaching(START, endCount);
+    document.getElementById("dv").textContent = done + " / " + total;
+    document.getElementById("db").style.width = (total ? done/total*100 : 0) + "%";
+
+    // Týdny
+    const firstMon = mondayOf(START);
+    const weeksTotal = Math.round((mondayOf(new Date(ZKOUSKOVE.getTime() - 864e5)) - firstMon) / 6048e5) + 1;
+    let wk = Math.floor((mondayOf(today) - firstMon) / 6048e5) + 1;
+    const wkShown = Math.min(Math.max(wk, 0), weeksTotal);
+    document.getElementById("wv").textContent =
+      today < START ? "– / " + weeksTotal : (today >= ZKOUSKOVE ? "hotovo" : wkShown + " / " + weeksTotal);
+    const wEl = document.getElementById("wk"); wEl.innerHTML = "";
+    for (let i = 1; i <= weeksTotal; i++) {
+      const s = document.createElement("span");
+      if (i < wk || today >= ZKOUSKOVE) s.className = "done";
+      if (i === wk && today < ZKOUSKOVE && today >= START) s.className = "now";
+      wEl.appendChild(s);
+    }
+
+    // Do zkouškového
+    const left = Math.round((ZKOUSKOVE - today) / 864e5);
+    const L = document.getElementById("left");
+    if (left > 0) L.innerHTML = "Do zkouškového zbývá <b>" + left + "</b> " + plural(left) + ".";
+    else if (left === 0) L.innerHTML = "Zkouškové začíná <b>dnes</b>.";
+    else L.textContent = "Zkouškové právě probíhá.";
+  }
+
+  render();
+  // překreslí se o půlnoci a při návratu na stránku
+  (function schedule() {
+    const n = new Date(), next = new Date(n.getFullYear(), n.getMonth(), n.getDate()+1, 0, 0, 5);
+    setTimeout(() => { render(); schedule(); }, next - n);
+  })();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+</script>
+</body>
+</html>

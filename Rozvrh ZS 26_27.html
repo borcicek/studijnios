@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rozvrh</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #ffffff; --text: #37352f; --muted: #787774; --faint: rgba(55,53,47,.3);
+    --line: rgba(55,53,47,.1); --field: rgba(55,53,47,.05); --track: rgba(55,53,47,.08);
+    --accent: #9f6b53; --accent-soft: rgba(159,107,83,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #191919; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.46); --faint: rgba(255,255,255,.22);
+      --line: rgba(255,255,255,.08); --field: rgba(255,255,255,.055); --track: rgba(255,255,255,.07);
+      --accent: #ba856f; --accent-soft: rgba(186,133,111,.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #191919; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.46); --faint: rgba(255,255,255,.22);
+    --line: rgba(255,255,255,.08); --field: rgba(255,255,255,.055); --track: rgba(255,255,255,.07);
+    --accent: #ba856f; --accent-soft: rgba(186,133,111,.14);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-size: 14px;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .w { padding: 14px 16px 16px; max-width: 620px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+
+  .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; }
+  .title { font-size: 16px; font-weight: 600; margin: 0; }
+  .title span { color: var(--muted); font-weight: 400; }
+  .tabs { display: flex; gap: 14px; }
+  .tabs button {
+    font: inherit; font-size: 13px; background: none; border: 0; padding: 2px 0; cursor: pointer;
+    color: var(--muted); border-bottom: 1.5px solid transparent;
+  }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* ----- den ----- */
+  .ev { display: grid; grid-template-columns: 52px 1fr; gap: 12px; padding: 10px 0; position: relative; }
+  .ev .tm { font-variant-numeric: tabular-nums; font-size: 13px; line-height: 1.35; }
+  .ev .tm small { display: block; color: var(--muted); font-size: 12px; }
+  .ev .body { border-left: 3px solid var(--c); padding-left: 10px; min-width: 0; }
+  .ev .nm { font-weight: 600; }
+  .ev .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .ev .st { font-size: 12px; margin-top: 6px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ev.past { opacity: .4; }
+  .ev.off { opacity: .4; }
+  .ev.off .nm { text-decoration: line-through; text-decoration-color: var(--faint); }
+  .ev.now { background: var(--accent-soft); border-radius: 8px; padding: 10px 10px; margin: 0 -10px; grid-template-columns: 52px 1fr; }
+  .ev.now .st { color: var(--accent); font-weight: 600; }
+  .ev.next .st { color: var(--text); }
+  .bar { height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; margin-top: 6px; }
+  .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+  .gap { padding: 2px 0 2px 64px; font-size: 12px; color: var(--faint); }
+  .gap.nowgap { color: var(--accent); }
+  .free { padding: 18px 0 6px; }
+  .free .big { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .foot { margin-top: 12px; font-size: 12px; color: var(--muted); }
+
+  /* ----- mřížka ----- */
+  .grid { display: grid; grid-template-columns: 34px repeat(var(--days), 1fr); gap: 0 4px; }
+  .dh { font-size: 12px; color: var(--muted); text-align: center; padding-bottom: 6px; }
+  .dh.today { color: var(--accent); font-weight: 600; }
+  .hours, .col { position: relative; height: var(--h); }
+  .hours span { position: absolute; right: 4px; font-size: 10px; color: var(--muted); transform: translateY(-50%); font-variant-numeric: tabular-nums; }
+  .col { background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% var(--hh); border-radius: 4px; }
+  .col.today { background-color: var(--field); }
+  .blk {
+    position: absolute; left: 0; right: 0; border-radius: 5px; padding: 4px 5px; overflow: hidden;
+    background: color-mix(in srgb, var(--c) 20%, transparent); border-left: 3px solid var(--c);
+    font-size: 11px; line-height: 1.25;
+  }
+  .blk b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+  .blk span { color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blk.lec { background: transparent; border: 1px dashed var(--faint); border-left: 3px solid var(--faint); color: var(--muted); }
+  .blk.live { box-shadow: 0 0 0 1.5px var(--accent); }
+  .nowline { position: absolute; left: -2px; right: -2px; height: 2px; background: var(--accent); border-radius: 1px; z-index: 2; }
+  .nowline::before { content: ""; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .legend i { display: inline-block; width: 12px; height: 9px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; }
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="head">
+    <p class="title" id="title"></p>
+    <div class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-v="day" aria-selected="true">Den</button>
+      <button role="tab" data-v="week" aria-selected="false">Týden</button>
+      <button role="tab" data-v="all" aria-selected="false">Vše</button>
+    </div>
+  </div>
+  <div id="view"></div>
+</div>
+
+<script>
+/* ===== NASTAVENÍ ===== */
+const SEM_START = new Date(2026, 8, 28);  // pondělí 1. týdne semestru
+const SWITCH_HOUR = 20;                   // od 20:00 ukazuje další den
+const DAY_FROM = 8, DAY_TO = 19.5;        // rozsah mřížky (hodiny)
+
+/* d: 1=Po … 5=Pá · k: "sem" seminář / "př" přednáška · go: chodím · w: [od,do] týdny, "odd" liché týdny */
+const C = { tp:"#d9730d", up:"#529cca", kr:"#9a6dd7", sdr:"#e255a1", op:"#4dab9a", pek:"#e2b53e", mpv:"#ba856f", x:"#8d8d8a" };
+const EV = [
+  { d:1, s:"8:00",  e:"9:30",  n:"Trestní právo I",                a:"Trestní právo",   k:"př",  t:"Gřivna",      r:"100", c:C.tp,  go:false },
+  { d:1, s:"10:00", e:"11:30", n:"Ústavní právo II",               a:"Ústavní právo",   k:"sem", t:"Hřebejk",     r:"305", c:C.up,  go:true, w:[2,11] },
+  { d:1, s:"12:00", e:"13:30", n:"Kriminologie I",                 a:"Kriminologie",    k:"sem", t:"McClure",     r:"300", c:C.kr,  go:true },
+  { d:1, s:"18:00", e:"19:30", n:"Sex, drogy a rock'n'roll",       a:"Sex, drogy & R'n'R", k:"sem", t:"Čihák",   r:"120", c:C.sdr, go:true },
+  { d:2, s:"8:00",  e:"9:30",  n:"Trestní právo I",                a:"Trestní právo",   k:"sem", t:"Bohuslav",    r:"220", c:C.tp,  go:true, w:[2,11] },
+  { d:2, s:"10:00", e:"11:30", n:"Občanské právo",                 a:"Občanské právo",  k:"sem", t:"Lederer",     r:"213", c:C.op,  go:true },
+  { d:2, s:"12:00", e:"13:30", n:"Ústavní právo II",               a:"Ústavní právo",   k:"př",  t:"Antoš",       r:"100", c:C.up,  go:false },
+  { d:2, s:"14:00", e:"15:30", n:"Právnická angličtina",           a:"Angličtina",      k:"sem", t:"Kvasničková", r:"103", c:C.x,   go:false },
+  { d:2, s:"16:00", e:"17:30", n:"Vědecký seminář",                a:"Vědecký seminář", k:"sem", t:"Skřejpek",    r:"350", c:C.x,   go:false },
+  { d:2, s:"16:00", e:"17:30", n:"Právo a ekonomie I",             a:"PEK",             k:"sem", t:"Bažantová",   r:"403", c:C.pek, go:true, w:"odd" },
+  { d:2, s:"18:00", e:"19:30", n:"Mezinárodní právo veřejné",      a:"MPV",             k:"sem", t:"Caban",       r:"103", c:C.mpv, go:true, w:[2,11] },
+  { d:3, s:"12:00", e:"13:30", n:"Mezinárodní právo veřejné",      a:"MPV",             k:"př",  t:"Bílková",     r:"100", c:C.mpv, go:false },
+  { d:3, s:"14:00", e:"15:30", n:"Občanské právo",                 a:"Občanské právo",  k:"př",  t:"Frinta",      r:"100", c:C.op,  go:false },
+  { d:3, s:"16:00", e:"17:30", n:"Dějiny ekonomického myšlení",    a:"Dějiny ek. myšl.",k:"sem", t:"Bažantová",   r:"120", c:C.x,   go:false },
+  { d:4, s:"12:00", e:"13:30", n:"Právo a ekonomie I",             a:"PEK",             k:"př",  t:"Montag",      r:"300", c:C.pek, go:false },
+  { d:4, s:"16:00", e:"17:30", n:"Právo duševního vlastnictví",    a:"Duševko",         k:"sem", t:"Holcová",     r:"100", c:C.x,   go:false },
+];
+
+/* ===== pomocné ===== */
+const $ = id => document.getElementById(id);
+const DNY = ["neděle","pondělí","úterý","středa","čtvrtek","pátek","sobota"];
+const DK = ["Ne","Po","Út","St","Čt","Pá","So"];
+const hm = s => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
+const day0 = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addD = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const monday = d => addD(day0(d), -((d.getDay() + 6) % 7));
+const semWeek = d => Math.floor((monday(d) - SEM_START) / 6048e5) + 1;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+function dur(m) { m = Math.max(0, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; return h ? h + " h" + (r ? " " + r + " min" : "") : r + " min"; }
+function runs(ev, date) {
+  const w = semWeek(date);
+  if (!ev.w) return true;
+  if (ev.w === "odd") return w % 2 === 1;
+  return w >= ev.w[0] && w <= ev.w[1];
+}
+function wNote(ev) { return !ev.w ? "" : ev.w === "odd" ? "liché týdny" : ev.w[0] + ".–" + ev.w[1] + ". týden"; }
+
+let view = "day";
+
+/* ===== DEN ===== */
+function targetDay(now) {
+  const t = day0(now);
+  return now.getHours() >= SWITCH_HOUR ? addD(t, 1) : t;
+}
+function nextClassAfter(date) {
+  for (let i = 1; i <= 14; i++) {
+    const d = addD(date, i);
+    const list = EV.filter(e => e.go && e.d === d.getDay() && runs(e, d)).sort((a, b) => hm(a.s) - hm(b.s));
+    if (list.length) return { d, e: list[0], i };
+  }
+  return null;
+}
+
+function renderDay(now) {
+  const d = targetDay(now), isToday = +d === +day0(now);
+  $("title").innerHTML = (isToday ? "Dnes" : "Zítra") + " <span>· " + DNY[d.getDay()] + " · " + semWeek(d) + ". týden</span>";
+  const list = EV.filter(e => e.go && e.d === d.getDay()).sort((a, b) => hm(a.s) - hm(b.s));
+  const nowM = isToday ? now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60 : -1;
+  const active = list.filter(e => runs(e, d));
+
+  if (!active.length) {
+    const nx = nextClassAfter(d);
+    let h = "<div class='free'><div class='big'>Volno</div>";
+    if (nx) h += "<div class='muted'>Nejbližší: " + (nx.i === 1 ? "zítra" : DNY[nx.d.getDay()]) + " v " + nx.e.s + " · " + esc(nx.e.n) + "</div>";
+    h += "</div>";
+    if (list.length) h += list.map(e => evHtml(e, "off", "tento týden není (" + wNote(e) + ")")).join("");
+    $("view").innerHTML = h;
+    return;
+  }
+
+  let h = "", prevEnd = null, nextMarked = false;
+  const upcoming = active.find(e => hm(e.s) > nowM);
+  for (const e of list) {
+    const s = hm(e.s), en = hm(e.e);
+    if (!runs(e, d)) { h += evHtml(e, "off", "tento týden není (" + wNote(e) + ")"); continue; }
+    if (prevEnd !== null && s > prevEnd) {
+      const inGap = nowM >= prevEnd && nowM < s;
+      h += "<div class='gap" + (inGap ? " nowgap" : "") + "'>" + (inGap ? "pauza · ještě " + dur(s - nowM) : "pauza " + dur(s - prevEnd)) + "</div>";
+    }
+    prevEnd = en;
+    if (nowM >= en) h += evHtml(e, "past", "");
+    else if (nowM >= s) {
+      const p = (nowM - s) / (en - s) * 100;
+      h += evHtml(e, "now", "probíhá · zbývá " + dur(en - nowM), p);
+    } else if (e === upcoming && !nextMarked) {
+      nextMarked = true;
+      h += evHtml(e, "next", isToday ? "za " + dur(s - nowM) : "");
+    } else h += evHtml(e, "", "");
+  }
+  const last = active[active.length - 1];
+  if (isToday && nowM >= hm(last.e)) {
+    const nx = nextClassAfter(d);
+    h += "<div class='foot'>Na dnes hotovo." + (nx ? " Další: " + (nx.i === 1 ? "zítra" : DNY[nx.d.getDay()]) + " v " + nx.e.s + "." : "") + "</div>";
+  }
+  $("view").innerHTML = h;
+}
+
+function evHtml(e, cls, status, prog) {
+  return "<div class='ev " + cls + "' style='--c:" + e.c + "'>" +
+    "<div class='tm'>" + e.s + "<small>" + e.e + "</small></div>" +
+    "<div class='body'><div class='nm'>" + esc(e.n) + "</div>" +
+    "<div class='meta'>" + (e.k === "sem" ? "seminář" : "přednáška") + " · " + esc(e.t) + " · místnost " + e.r + "</div>" +
+    (status ? "<div class='st'>" + status + "</div>" : "") +
+    (prog != null ? "<div class='bar'><i style='width:" + prog + "%'></i></div>" : "") +
+    "</div></div>";
+}
+
+/* ===== TÝDEN / VŠE ===== */
+function renderGrid(now, all) {
+  const wk = semWeek(now);
+  $("title").innerHTML = (all ? "Celý rozvrh" : "Můj týden") + " <span>· " + wk + ". týden</span>";
+  const evs = EV.filter(e => all || e.go);
+  const days = [1, 2, 3, 4, 5].filter(d => evs.some(e => e.d === d) || d <= 4);
+  const HH = 38, H = (DAY_TO - DAY_FROM) * HH;
+  const todayDow = now.getDay(), nowM = now.getHours() * 60 + now.getMinutes();
+  const mon = monday(now);
+
+  let h = "<div class='grid' style='--days:" + days.length + ";--h:" + H + "px;--hh:" + HH + "px'><div></div>";
+  h += days.map(d => "<div class='dh" + (d === todayDow ? " today" : "") + "'>" + DK[d] + "</div>").join("");
+  h += "<div class='hours'>";
+  for (let t = DAY_FROM; t <= DAY_TO; t += 2) h += "<span style='top:" + ((t - DAY_FROM) * HH) + "px'>" + t + ":00</span>";
+  h += "</div>";
+
+  for (const d of days) {
+    const date = addD(mon, d - 1);
+    const list = evs.filter(e => e.d === d).sort((a, b) => hm(a.s) - hm(b.s));
+    // překryvy vedle sebe
+    const lanes = [];
+    list.forEach(e => {
+      let l = 0; while (lanes[l] && lanes[l] > hm(e.s)) l++;
+      lanes[l] = hm(e.e); e._l = l;
+    });
+    list.forEach(e => { e._n = list.filter(o => hm(o.s) < hm(e.e) && hm(o.e) > hm(e.s)).reduce((m, o) => Math.max(m, o._l + 1), 1); });
+
+    h += "<div class='col" + (d === todayDow ? " today" : "") + "'>";
+    for (const e of list) {
+      const top = (hm(e.s) / 60 - DAY_FROM) * HH, ht = (hm(e.e) - hm(e.s)) / 60 * HH - 2;
+      const live = d === todayDow && nowM >= hm(e.s) && nowM < hm(e.e) && runs(e, date);
+      const lec = all && !e.go;
+      const w = 100 / e._n;
+      h += "<div class='blk" + (lec ? " lec" : "") + (live ? " live" : "") + "' style='--c:" + e.c + ";top:" + top + "px;height:" + ht + "px;left:" + (e._l * w) + "%;width:calc(" + w + "% - " + (e._n > 1 ? 2 : 0) + "px);right:auto' title='" +
+        esc(e.n + " · " + (e.k === "sem" ? "seminář" : "přednáška") + " · " + e.t + " · " + e.s + "–" + e.e + " · místnost " + e.r + (wNote(e) ? " · " + wNote(e) : "")) + "'>" +
+        "<b>" + esc(e.a) + "</b><span>" + e.s + " · " + e.r + "</span>" + (wNote(e) ? "<span>" + wNote(e) + "</span>" : "") + "</div>";
+    }
+    if (d === todayDow && nowM >= DAY_FROM * 60 && nowM <= DAY_TO * 60)
+      h += "<div class='nowline' style='top:" + ((nowM / 60 - DAY_FROM) * HH) + "px'></div>";
+    h += "</div>";
+  }
+  h += "</div>";
+  if (all) h += "<div class='legend'><span><i style='background:color-mix(in srgb,var(--accent) 22%,transparent);border-left:3px solid var(--accent)'></i>chodím</span><span><i style='border:1px dashed var(--faint)'></i>nechodím</span></div>";
+  $("view").innerHTML = h;
+}
+
+/* ===== ovládání ===== */
+function render() {
+  const now = new Date();
+  if (view === "day") renderDay(now);
+  else renderGrid(now, view === "all");
+}
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  view = b.dataset.v;
+  document.querySelectorAll("#tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
+  render();
+});
+render();
+setInterval(render, 20000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+</script>
+</body>
+</html>

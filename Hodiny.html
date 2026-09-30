@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Čas</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #ffffff; --text: #37352f; --muted: #787774; --accent: #9f6b53;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #191919; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.46); --accent: #ba856f; }
+  }
+  :root[data-theme="dark"] { --bg: #191919; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.46); --accent: #ba856f; }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center;
+  }
+  .w { padding: 14px 16px; display: flex; align-items: baseline; gap: 6px; }
+  .hm { font-size: clamp(40px, 16vw, 64px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .colon { color: var(--accent); transition: opacity .2s; }
+  .colon.off { opacity: .35; }
+  .s { font-size: clamp(16px, 5vw, 22px); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { .colon { transition: none; } }
+</style>
+</head>
+<body>
+<div class="w" aria-live="off">
+  <span class="hm"><span id="h">00</span><span class="colon" id="c">:</span><span id="m">00</span></span>
+  <span class="s" id="s">00</span>
+</div>
+<script>
+  const p = n => String(n).padStart(2, "0");
+  function tick() {
+    const d = new Date();
+    document.getElementById("h").textContent = p(d.getHours());
+    document.getElementById("m").textContent = p(d.getMinutes());
+    document.getElementById("s").textContent = p(d.getSeconds());
+    document.getElementById("c").classList.toggle("off", d.getMilliseconds() >= 500);
+    document.title = p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  tick();
+  setInterval(tick, 250);
+</script>
+</body>
+</html>
