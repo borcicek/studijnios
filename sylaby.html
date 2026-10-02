@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sylaby</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #ffffff; --text: #37352f; --muted: #787774; --faint: rgba(55,53,47,.3);
+    --line: rgba(55,53,47,.1); --field: rgba(55,53,47,.05); --track: rgba(55,53,47,.08);
+    --accent: #9f6b53; --accent-soft: rgba(159,107,83,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #191919; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.46); --faint: rgba(255,255,255,.22);
+      --line: rgba(255,255,255,.08); --field: rgba(255,255,255,.055); --track: rgba(255,255,255,.07);
+      --accent: #ba856f; --accent-soft: rgba(186,133,111,.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #191919; --text: rgba(255,255,255,.9); --muted: rgba(255,255,255,.46); --faint: rgba(255,255,255,.22);
+    --line: rgba(255,255,255,.08); --field: rgba(255,255,255,.055); --track: rgba(255,255,255,.07);
+    --accent: #ba856f; --accent-soft: rgba(186,133,111,.14);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-size: 14px;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .w { padding: 14px 16px 16px; max-width: 640px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+
+  .head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 14px; }
+  .tabs button { font-size: 13px; background: none; border: 0; padding: 2px 0; color: var(--muted); border-bottom: 1.5px solid transparent; }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .nav { display: flex; align-items: center; gap: 2px; margin-left: auto; margin-right: 150px; }
+  .nav button { background: none; border: 0; color: var(--muted); font-size: 17px; padding: 0 8px; border-radius: 4px; line-height: 1.2; }
+  .nav button.today { font-size: 12px; }
+  @media (max-width: 480px) { .nav { margin-right: 0; } }
+
+  h2 { font-size: 15px; margin: 18px 0 2px; font-weight: 600; }
+  h2:first-child { margin-top: 0; }
+  h2 small { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .sub { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .primary h2 { color: var(--accent); }
+
+  .it { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .it:first-of-type { border-top: 0; }
+  .chk {
+    width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--faint); background: transparent;
+    padding: 0; margin-top: 1px; display: grid; place-items: center; font-size: 11px; line-height: 1; color: transparent;
+  }
+  .chk { border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+  .chk[data-s="1"] { background: linear-gradient(90deg, var(--c) 50%, transparent 50%); border-color: var(--c); }
+  .chk[data-s="2"] { background: var(--c); border-color: var(--c); color: #fff; }
+  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin: 4px 0 12px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend .chk { width: 12px; height: 12px; border-width: 1.5px; font-size: 8px; cursor: default; }
+  .debt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 6px;
+          background: var(--accent-soft); color: var(--accent); font-size: 13px; margin-bottom: 12px; }
+  .debt button { background: none; border: 0; color: var(--accent); font-weight: 600; font-size: 13px; padding: 0; }
+  .big { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .kpis { display: flex; gap: 22px; margin-bottom: 16px; flex-wrap: wrap; }
+  .kpis div small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .srow { padding: 8px 0; border-top: 1px solid var(--line); }
+  .srow .top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; margin-bottom: 5px; }
+  .srow .top b { font-weight: 600; }
+  .srow .top span { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .segs { display: flex; gap: 2px; }
+  .segs i { flex: 1; height: 7px; border-radius: 2px; background: var(--track); }
+  .segs i.due { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 45%, transparent); }
+  .segs i.s1 { background: linear-gradient(90deg, var(--c) 50%, color-mix(in srgb, var(--c) 25%, transparent) 50%); }
+  .segs i.s2 { background: var(--c); }
+  .row { grid-template-columns: 70px 1fr 22px; }
+  .row .chk { align-self: start; }
+  .it.done .t { color: var(--muted); }
+  .sj { font-size: 12px; font-weight: 600; color: var(--c); }
+  .t { margin: 1px 0 2px; line-height: 1.35; }
+  .m { font-size: 12px; color: var(--muted); }
+  .m .warn { color: var(--accent); }
+  .tag { font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
+  .note { font-size: 13px; color: var(--muted); padding: 6px 0; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip { border: 1px solid var(--line); background: transparent; padding: 4px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+  .chip[aria-pressed="true"] { color: var(--text); border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); }
+  .prog { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .prog .b { flex: 1; height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; }
+  .prog .b i { display: block; height: 100%; background: var(--c); }
+  .row { display: grid; grid-template-columns: 70px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+  .row .wk { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.35; }
+  .row.past { opacity: .5; }
+  .row.past .t::before { content: "✓ "; color: var(--c); }
+  .row.now { background: var(--accent-soft); border-radius: 6px; padding: 7px 8px; margin: 0 -8px; border-top-color: transparent; }
+  .row.off .t { color: var(--muted); font-style: italic; }
+  .foot { font-size: 11px; color: var(--muted); margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="head">
+    <div class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-v="week" aria-selected="true">Týden</button>
+      <button role="tab" data-v="subj" aria-selected="false">Předměty</button>
+      <button role="tab" data-v="over" aria-selected="false">Příprava</button>
+    </div>
+    <div class="nav" id="nav">
+      <button id="prev" aria-label="Předchozí týden">‹</button>
+      <button id="now" class="today">dnes</button>
+      <button id="next" aria-label="Další týden">›</button>
+    </div>
+  </div>
+  <div id="view"></div>
+  <div class="foot">„odhad“ = předmět nemá rozpis po týdnech, témata jsou rozložená podle pořadí v sylabu.</div>
+</div>
+
+<script>
+/* ===== NASTAVENÍ ===== */
+const SEM_START = new Date(2026, 8, 28);             // pondělí 1. týdne
+const LAST_WEEK = 12;                                // 12. týden = zápočtový
+const SVATKY = { "2026-9-28": "sv. Václava", "2026-10-28": "28. říjen", "2026-11-17": "17. listopad" };
+
+/* d: den (1=Po) · s: tvůj seminář/hodina · w: [od,do] týdny nebo {from, step} · est: odhad
+   topics: [týden, téma] */
+const S = [
+  { id:"up", n:"Ústavní právo II", c:"#529cca", lec:{d:2,t:"12:00"}, sem:{d:1,t:"10:00",w:[2,11]}, est:false, topics:[
+    [1,"Listina základních práv a svobod a další lidskoprávní dokumenty; působení základních práv, způsoby jejich omezování"],
+    [2,"Výchozí principy základních práv; rovnost a zákaz diskriminace"],
+    [3,"Člověk jako důstojná bytost"],
+    [4,"Člověk jako svobodná bytost I"],
+    [5,"Člověk jako svobodná bytost II"],
+    [6,"Člověk jako zóon politikon (politická práva)"],
+    [7,"Týden fakulty: o Ústavním soudu s jeho předsedou"],
+    [9,"Právo na spravedlivý proces"],
+    [10,"Sociální a kulturní práva"],
+    [11,"Hospodářská práva"],
+    [12,"Bezpečnostní aspekty ústavního pořádku a mimořádné stavy"] ]},
+  { id:"tp", n:"Trestní právo I", c:"#d9730d", lec:{d:1,t:"8:00"}, sem:{d:2,t:"8:00",w:[2,11]}, est:true, topics:[
+    [2,"Pojem, funkce a zásady trestního práva; prameny a výklad trestních zákonů"],
+    [3,"Působnost trestních zákonů"],
+    [4,"Pojem trestného činu, třídění; skutková podstata"],
+    [5,"Objekt a objektivní stránka trestného činu"],
+    [6,"Pachatel trestného činu"],
+    [7,"Subjektivní stránka (zavinění)"],
+    [8,"Okolnosti vylučující protiprávnost"],
+    [9,"Vývojová stadia trestného činu"],
+    [10,"Trestná součinnost a účastenství"],
+    [11,"Souběh a recidiva; zánik trestní odpovědnosti"],
+    [12,"Trestní odpovědnost právnických osob a mladistvých · 1. termín celokatederního testu"] ]},
+  { id:"op", n:"Občanské právo II", c:"#4dab9a", lec:{d:3,t:"14:00"}, sem:{d:2,t:"10:00"}, est:true, topics:[
+    [1,"Rodinné právo: vývoj, prameny, zásady, osobní status"],
+    [2,"Manželství: uzavření, neplatnost, zdánlivost, zánik"],
+    [3,"Manželské majetkové právo (SJM); registrované partnerství"],
+    [4,"Příbuzenství a rodičovství, určování a popírání; osvojení"],
+    [6,"Rodičovská odpovědnost"],
+    [7,"Péče o dítě jinými osobami; vyživovací povinnost"],
+    [8,"Věcná práva: úvod, veřejný seznam, katastr"],
+    [9,"Držba"],
+    [10,"Vlastnictví a jeho omezení"],
+    [11,"Nabývání vlastnického práva"],
+    [12,"Spoluvlastnictví · hlavní termín zápočtového testu"] ]},
+  { id:"mpv", n:"Mezinárodní právo veřejné I", c:"#ba856f", lec:{d:3,t:"12:00"}, sem:{d:2,t:"18:00",w:[2,11]}, est:true, topics:[
+    [1,"MPV: vymezení, znaky, systém, historie"],
+    [2,"Prameny I: obyčej, obecné zásady, jednostranné akty"],
+    [3,"Prameny II: mezinárodní smlouvy (sjednávání, platnost, výhrady, výklad)"],
+    [4,"Pravidla MPV: kogentní a dispozitivní normy, soft law"],
+    [6,"Vztah MPV a vnitrostátního práva (monismus, dualismus, úprava v ČR)"],
+    [7,"Subjekty I: pojem a katalog subjektů"],
+    [8,"Subjekty II: stát (vznik, zánik, imunity, sukcese)"],
+    [9,"Subjekty III: mezinárodní organizace, OSN"],
+    [10,"Odpovědnost státu"],
+    [11,"Donucení v MPV (retorze, protiopatření, sebeobrana, RB OSN)"],
+    [12,"Řešení sporů (arbitráž, MSD); aktuální otázky"] ]},
+  { id:"pek", n:"Právo a ekonomie I", c:"#e2b53e", lec:{d:4,t:"12:00"}, sem:{d:2,t:"16:00",w:{from:3, step:2}}, est:true, topics:[
+    [1,"Instituce a společenský blahobyt"],
+    [2,"Co je ekonomie, její hlavní principy"],
+    [3,"Ekonomická metoda"],
+    [4,"Specializace a směna"],
+    [5,"Poptávka a nabídka"],
+    [6,"Trhy, efektivita a blahobyt"],
+    [7,"Základy optimalizačního chování"],
+    [8,"Konkurenční trhy vs. monopol"],
+    [9,"Trhy práce"],
+    [10,"Strategické chování a teorie her"],
+    [11,"Zdanění a design daňového systému"] ]},
+  { id:"kr", n:"Kriminologie I", c:"#9a6dd7", lec:null, sem:{d:1,t:"12:00"}, est:true, topics:[
+    [2,"Kriminalita: trestněprávní a sociologické definice, míra, zdroje dat"],
+    [3,"Kriminologické školy a směry I"],
+    [4,"Kriminologické školy a směry II"],
+    [5,"Pachatel, vývojová kriminologie a desistence"],
+    [6,"Viktimologie"],
+    [7,"Trestní politika"],
+    [8,"Prevence kriminality"],
+    [9,"Policing"],
+    [10,"Ukládání trestů"],
+    [11,"Vězeňství"] ]},
+  { id:"sdr", n:"Sex, drogy a rock'n'roll", c:"#e255a1", lec:null, sem:{d:1,t:"18:00"}, est:true, topics:[
+    [2,"Úvod: regulace, externality"],
+    [3,"Drogová závislost"],
+    [4,"Drogová prohibice a legalizace"],
+    [5,"Sex"],
+    [6,"Manželství a rodina: sňatkový trh, dělba práce"],
+    [7,"Manželství jako dlouhodobý kontrakt, rozvody"],
+    [8,"Prostituce a obchodování s lidmi"],
+    [9,"Pornografie"],
+    [10,"Potraty"],
+    [11,"Obezita; hazard"],
+    [12,"Zábavní průmysl a duševní vlastnictví"] ]},
+];
+
+/* ===== pomocné ===== */
+const $ = id => document.getElementById(id);
+const DK = ["ne","po","út","st","čt","pá","so"];
+const day0 = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addD = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const monday = d => addD(day0(d), -((d.getDay() + 6) % 7));
+const weekOf = d => Math.floor((monday(d) - SEM_START) / 6048e5) + 1;
+const wkMon = w => addD(SEM_START, (w - 1) * 7);
+const dkey = d => d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+const dmy = d => d.getDate() + ". " + (d.getMonth() + 1) + ".";
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+function range(w) { const a = wkMon(w); return a.getDate() + ". " + (a.getMonth() !== addD(a, 4).getMonth() ? (a.getMonth() + 1) + ". " : "") + "– " + dmy(addD(a, 4)); }
+function slotDate(w, slot) { return addD(wkMon(w), slot.d - 1); }
+function semRuns(s, w) { const r = s.sem.w; if (!r) return true; if (r.step) return w >= r.from && (w - r.from) % r.step === 0; return w >= r[0] && w <= r[1]; }
+
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+/* stav přípravy: klíč "předmět:týden" → 1 nastudováno, 2 umím */
+let st = lsGet("sylaby.status.v1", null);
+if (!st) {
+  st = {};
+  const old = lsGet("sylaby.prep.v1", {});
+  Object.keys(old).forEach(k => { const [w, id] = k.split(":"); st[id + ":" + w] = 1; });
+  lsSet("sylaby.status.v1", st);
+}
+const stOf = (id, w) => st[id + ":" + w] || 0;
+function cycle(k) { const v = ((st[k] || 0) + 1) % 3; if (v) st[k] = v; else delete st[k]; lsSet("sylaby.status.v1", st); }
+const STL = ["nenastudováno", "nastudováno", "umím"];
+function chk(s, w) {
+  const v = stOf(s.id, w);
+  return "<button class='chk' style='--c:" + s.c + "' data-k='" + s.id + ":" + w + "' data-s='" + v + "' aria-label='Stav: " + STL[v] + " (kliknutím změníš)' title='" + STL[v] + "'>" + (v === 2 ? "✓" : "") + "</button>";
+}
+/* termín přípravy = tvůj seminář/hodina v daném týdnu, jinak přednáška, jinak pátek */
+function deadline(s, w) {
+  const sd = slotDate(w, s.sem);
+  if (semRuns(s, w) && !(w > 11 && s.sem.w) && !SVATKY[dkey(sd)]) return sd;
+  if (s.lec) return slotDate(w, s.lec);
+  return addD(wkMon(w), 4);
+}
+function allTopics() { const o = []; S.forEach(s => s.topics.forEach(([w, t]) => o.push({ s, w, t, dl: deadline(s, w) }))); return o; }
+function debtList(now) { return allTopics().filter(x => addD(x.dl, 1) <= now && !stOf(x.s.id, x.w)).sort((a, b) => a.dl - b.dl); }
+
+/* ===== stav ===== */
+let view = "week", shift = 0, subj = lsGet("sylaby.subj", "up");
+
+function defaultWeek() {
+  const now = new Date(), w = weekOf(now), dow = now.getDay();
+  const endOfWeek = dow === 0 || dow === 6 || dow === 5;
+  return { focus: endOfWeek ? w + 1 : w, endOfWeek };
+}
+
+/* ===== TÝDEN ===== */
+function itemsFor(w) {
+  const out = [];
+  for (const s of S) for (const [tw, t] of s.topics) if (tw === w) out.push({ s, t });
+  return out.sort((a, b) => (a.s.sem.d - b.s.sem.d) || (parseInt(a.s.sem.t) - parseInt(b.s.sem.t)));
+}
+
+function metaFor(s, w) {
+  const parts = [];
+  const sd = slotDate(w, s.sem);
+  const r = s.sem.w;
+  if (r && r.step && w < r.from) parts.push("seminář začíná " + r.from + ". týden (" + dmy(slotDate(r.from, s.sem)) + ")");
+  else if (r && r.step && !semRuns(s, w)) parts.push("seminář tento týden není (jednou za 14 dní)");
+  else if (Array.isArray(r) && w < r[0]) parts.push("seminář začíná " + r[0] + ". týden");
+  else if (w > 11 && r) parts.push("seminář už není");
+  else if (SVATKY[dkey(sd)]) parts.push("<span class='warn'>" + (s.lec ? "seminář" : "hodina") + " odpadá (" + SVATKY[dkey(sd)] + ")</span>");
+  else parts.push((s.lec ? "tvůj seminář " : "") + DK[s.sem.d] + " " + s.sem.t);
+  if (s.lec) {
+    const ld = slotDate(w, s.lec);
+    parts.push(SVATKY[dkey(ld)] ? "přednáška odpadá" : "přednáška " + DK[s.lec.d] + " " + s.lec.t);
+  }
+  return parts.join(" · ");
+}
+
+function section(w, title, primary) {
+  let h = "<div" + (primary ? " class='primary'" : "") + "><h2>" + title + " <small>· " + w + ". týden, " + range(w) + "</small></h2>";
+  if (w === LAST_WEEK) h += "<div class='sub'>Zápočtový týden</div>";
+  if (w < 1) return h + "<div class='note'>Semestr ještě nezačal.</div></div>";
+  if (w > LAST_WEEK) return h + "<div class='note'>Zkouškové období, žádná nová témata.</div></div>";
+  const list = itemsFor(w);
+  if (!list.length) h += "<div class='note'>V tomhle týdnu nic nového.</div>";
+  for (const { s, t } of list) {
+    const on = stOf(s.id, w) > 0;
+    h += "<div class='it" + (on ? " done" : "") + "' style='--c:" + s.c + "'>" + chk(s, w) +
+      "<div><div class='sj'>" + esc(s.n) + (s.est ? "<span class='tag'>odhad</span>" : "") + "</div>" +
+      "<div class='t'>" + esc(t) + "</div><div class='m'>" + metaFor(s, w) + "</div></div></div>";
+  }
+  return h + "</div>";
+}
+
+function banner() {
+  const n = debtList(new Date()).length;
+  const leg = "<div class='legend'><span><span class='chk' style='--c:var(--muted)' data-s='0'></span>nic</span><span><span class='chk' style='--c:var(--muted)' data-s='1'></span>nastudováno</span><span><span class='chk' style='--c:var(--muted)' data-s='2'>✓</span>umím</span><span>klikáním měníš stav</span></div>";
+  return (n ? "<div class='debt'><span>Nedoháněné: " + n + " " + (n === 1 ? "téma" : n < 5 ? "témata" : "témat") + "</span><button data-go='over'>zobrazit</button></div>" : "") + leg;
+}
+function renderWeek() {
+  $("nav").style.visibility = "visible";
+  const { focus, endOfWeek } = defaultWeek();
+  const cur = weekOf(new Date());
+  if (shift === 0) {
+    $("view").innerHTML = banner() + (endOfWeek
+      ? section(focus, "Příští týden · připrav se", true) + section(cur, "Tento týden se probralo", false)
+      : section(cur, "Tento týden", true) + section(cur + 1, "Příští týden", false));
+  } else {
+    const w = focus + shift;
+    const title = w < cur ? "Probráno" : w === cur ? "Tento týden" : w === cur + 1 ? "Příští týden" : "Výhled";
+    $("view").innerHTML = banner() + section(w, title, true);
+  }
+}
+
+/* ===== PŘEDMĚTY ===== */
+function renderSubj() {
+  $("nav").style.visibility = "hidden";
+  const s = S.find(x => x.id === subj) || S[0];
+  const now = new Date();
+  let h = "<div class='chips'>" + S.map(x =>
+    "<button class='chip' data-s='" + x.id + "' style='--c:" + x.c + "' aria-pressed='" + (x.id === s.id) + "'>" + esc(x.n) + "</button>").join("") + "</div>";
+
+  const slot = s.lec || s.sem;
+  const byW = {}; s.topics.forEach(([w, t]) => byW[w] = t);
+  const done = s.topics.filter(([w]) => addD(slotDate(w, slot), 1) <= now).length;
+  const mine = s.topics.filter(([w]) => stOf(s.id, w)).length;
+  h += "<div class='prog' style='--c:" + s.c + "'><span>" + done + " / " + s.topics.length + " probráno · " + mine + " připraveno</span><div class='b'><i style='width:" + (done / s.topics.length * 100) + "%'></i></div>" +
+       (s.est ? "<span class='tag'>odhad</span>" : "") + "</div>";
+
+  const curW = weekOf(now);
+  for (let w = 1; w <= LAST_WEEK; w++) {
+    const d = slotDate(w, slot), hol = SVATKY[dkey(d)];
+    if (!byW[w] && !hol) continue;
+    const past = addD(d, 1) <= now;
+    const cls = hol && !byW[w] ? "off" : past ? "past" : w === curW ? "now" : "";
+    h += "<div class='row " + cls + "' style='--c:" + s.c + "'><div class='wk'>" + w + ". týden<br>" + DK[d.getDay()] + " " + dmy(d) + "</div>" +
+         "<div class='t'>" + (byW[w] ? esc(byW[w]) : "odpadá (" + hol + ")") + "</div>" + (byW[w] ? chk(s, w) : "<span></span>") + "</div>";
+  }
+  $("view").innerHTML = h;
+}
+
+/* ===== PŘÍPRAVA (přehled) ===== */
+function renderOver() {
+  $("nav").style.visibility = "hidden";
+  const now = new Date(), all = allTopics();
+  const due = all.filter(x => addD(x.dl, 1) <= now);
+  const ready = due.filter(x => stOf(x.s.id, x.w)).length;
+  const know = all.filter(x => stOf(x.s.id, x.w) === 2).length;
+  const debt = debtList(now);
+  const pct = due.length ? Math.round(ready / due.length * 100) : 100;
+
+  let h = "<div class='kpis'>" +
+    "<div><div class='big'>" + pct + " %</div><small>průběžná příprava (" + ready + " / " + due.length + ")</small></div>" +
+    "<div><div class='big'>" + debt.length + "</div><small>nedoháněných témat</small></div>" +
+    "<div><div class='big'>" + know + " / " + all.length + "</div><small>témat umím na zkoušku</small></div></div>";
+
+  h += "<h2>Podle předmětů</h2><div class='sub'>Každý dílek je jedno téma. Orámované = už mělo být připravené.</div>";
+  for (const s of S) {
+    const ts = s.topics.map(([w]) => ({ w, v: stOf(s.id, w), due: addD(deadline(s, w), 1) <= now }));
+    const d = ts.filter(x => x.due), r = d.filter(x => x.v).length, k = ts.filter(x => x.v === 2).length;
+    h += "<div class='srow' style='--c:" + s.c + "'><div class='top'><b>" + esc(s.n) + "</b><span>" + r + " / " + d.length + " včas · " + k + " umím</span></div>" +
+      "<div class='segs'>" + ts.map(x => "<i class='" + (x.v ? "s" + x.v : "") + (x.due && !x.v ? " due" : "") + "' title='" + x.w + ". týden · " + STL[x.v] + "'></i>").join("") + "</div></div>";
+  }
+
+  h += "<h2 style='margin-top:20px'>Nedoháněné</h2>";
+  if (!debt.length) h += "<div class='note'>Nic, jsi v obraze. 👌</div>";
+  for (const x of debt) {
+    const late = Math.round((day0(now) - day0(x.dl)) / 864e5);
+    h += "<div class='it' style='--c:" + x.s.c + "'>" + chk(x.s, x.w) +
+      "<div><div class='sj'>" + esc(x.s.n) + "</div><div class='t'>" + esc(x.t) + "</div>" +
+      "<div class='m'>" + x.w + ". týden · mělo být do " + DK[x.dl.getDay()] + " " + dmy(x.dl) + " (před " + late + " " + (late === 1 ? "dnem" : "dny") + ")</div></div></div>";
+  }
+  $("view").innerHTML = h;
+}
+
+/* ===== ovládání ===== */
+function setView(v) {
+  view = v;
+  document.querySelectorAll("#tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.v === v));
+  render();
+}
+function render() { view === "week" ? renderWeek() : view === "subj" ? renderSubj() : renderOver(); }
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  setView(b.dataset.v);
+});
+$("prev").onclick = () => { shift--; render(); };
+$("next").onclick = () => { shift++; render(); };
+$("now").onclick = () => { shift = 0; render(); };
+$("view").addEventListener("click", e => {
+  const c = e.target.closest(".chk");
+  if (c && c.dataset.k) { cycle(c.dataset.k); render(); return; }
+  const g = e.target.closest("[data-go]");
+  if (g) { setView(g.dataset.go); return; }
+  const ch = e.target.closest(".chip");
+  if (ch) { subj = ch.dataset.s; lsSet("sylaby.subj", subj); render(); }
+});
+render();
+setInterval(render, 5 * 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+</script>
+</body>
+</html>
